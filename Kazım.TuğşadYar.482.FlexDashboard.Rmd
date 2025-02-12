@@ -1,0 +1,751 @@
+---
+title: "Cytomegalovirus"
+output: 
+  flexdashboard::flex_dashboard:
+    vertical_layout: fill
+    orientation: rows
+    social: menu
+    source_code: embed
+---
+
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(tidyverse)
+library(medicaldata)
+library(corrplot)
+library(vcd)
+library(GGally)
+library(caret)
+library(nnet)
+library(lattice)
+library(MASS)
+library(dplyr)
+library(lmtest)
+library(DataExplorer)
+library(DescTools)
+library(car)
+library(epiR)
+library(vcd)
+library(epitools)
+```
+
+
+
+
+
+EDA
+=======================================================================
+
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Stars plot
+```{r}
+cytomegalovirus <- na.omit(cytomegalovirus)
+colnames(cytomegalovirus)[19] <- "c1c2ratio"
+#plot
+stars(x=cytomegalovirus[order(cytomegalovirus$age),-1],ncol = 10,key.loc = c(17,1),draw.segments = TRUE,label=NULL,cex=0.5,key.xpd = TRUE)
+
+```
+
+### Age vs Frequency 
+```{r}
+p <- ggplot(cytomegalovirus, aes(x = age))+
+  geom_histogram(binwidth =2,fill = "skyblue", color = "black")+
+  xlab("Age")
+
+plotly::ggplotly(p)
+
+```
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Diagnosis Types & Frequencies
+```{r}
+#another plot 
+p2 <- ggplot(cytomegalovirus, aes(y = diagnosis)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Bar Plot of Diagnosis ",
+       y = "Diagnosis",
+       x = "Count")
+p2
+```
+
+### Correlation plot
+```{r}
+p3 <- cor(cytomegalovirus[,c(1,7,9,14,15,16,17,20,22,24,26)])
+corrplot(p3, method = "color", type = "upper")
+
+
+
+```
+
+Comment tabs {.tabset}
+------------------
+### Comment
+
+-In stars plot, I ordered the data with respect to increasing age.And The plot shows the numerical variables. From the plot, we can see that none of the variables are increasing or decreasing with age.
+-The majority of patients in the data set are between 50-60 years old. 
+The mean age of the patients is approximately 53.
+-The bar plot of diagnosis and their frequencies. Majority of people suffer from non-Hodgkin Lymphoma and Acute Myleoid Leukemia.
+-This correlation matrix shows that there is multicollinearity problem between :
+TNC dose  and CD8 dose,
+CD3 dose and CD8 dose.
+
+
+
+
+
+
+
+
+Distributions of Numerical variables
+=======================================================================
+
+
+
+Row
+-----------------------------------------------------------------------
+### Chart
+
+```{r}
+p4 <- ggplot(cytomegalovirus, aes(x =prior.chemo),color="blue")+
+  geom_density(fill = alpha("skyblue",0.3), color = "black")+
+  xlab("Prior chemotherapy Regimen")
+
+plotly::ggplotly(p4)
+
+```
+
+### Chart
+
+```{r}
+p5 <- ggplot(cytomegalovirus, aes(x =time.to.transplant))+
+  geom_density(fill = alpha("skyblue",0.3), color = "black",binwidth = 10)+
+  xlab("Time To Transplant")
+
+plotly::ggplotly(p5)
+```
+
+
+Column
+-----------------------------------------------------------------------
+### Chart
+
+```{r}
+p6 <- ggplot(cytomegalovirus, aes(x =TNC.dose))+
+  geom_density(fill = alpha("skyblue",0.3), color = "black",binwidth = 2)+
+  xlab("TNC dose")
+
+plotly::ggplotly(p6)
+```
+
+
+
+
+
+
+Distributions for numerical variables
+=======================================================================
+
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart
+
+```{r}
+p7 <- ggplot(cytomegalovirus, aes(x =CD3.dose),color="blue",width=3)+
+  geom_density(fill = alpha("skyblue",0.3), color = "black")+
+  xlab("Total CD3+ (T) cell dose (x 10^8/kg)")
+
+plotly::ggplotly(p7)
+
+```
+Row
+-----------------------------------------------------------------------
+
+
+### Chart
+
+```{r}
+p9 <- ggplot(cytomegalovirus, aes(x = CD8.dose),color="blue")+
+  geom_density(fill = alpha("skyblue",0.3), color = "black",)+
+  xlab("Total CD8+ cell dose (x 10^8/kg)")
+
+plotly::ggplotly(p9)
+
+```
+
+
+
+### Chart
+
+
+```{r}
+p10 <- ggplot(cytomegalovirus, aes(x =CD34.dose),color="blue")+
+  geom_density(fill = alpha("skyblue",0.3), color = "black")+
+  xlab("Total CD34+ (stem) cell dose (x 10^8/kg)")
+
+plotly::ggplotly(p10)
+
+```
+
+
+
+
+
+
+
+
+
+Relation Plots
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### Age VS Time from cancer diagnosis to transplant (months)
+```{r}
+p11 <- ggplot(cytomegalovirus, aes(x=age, y=time.to.transplant)) + 
+     geom_point(alpha = 0.5) + 
+     geom_density_2d() + 
+     theme(panel.background = element_rect(fill = '#ffffff'))
+ggplotly(p11)
+```
+
+### Age Vs Time to cytomegalovirus reactivation
+```{r}
+p12<- ggplot(cytomegalovirus, aes(x = age, y = time.to.cmv , color = sex)) +
+  geom_point() +
+  labs( x = "Age",
+       y = "Time to cytomegalovirus reactivation ",
+       shape = "Gender")
+ggplotly(p12)
+
+```
+comment tab {.tabset}
+------------------
+### Comment
+-The density lines are concenctrated at the age 60. Which means, if the age of patients are close to 60, the time from cancer diagnosis to transplant decreases. But still, there are some patients whose age are under 40 and their time from diagnosis to transplant is low.
+
+
+
+Relation Plots
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+### Chart
+
+```{r}
+p13 <- ggplot(cytomegalovirus, aes(x = diagnosis,y = age,fill=diagnosis)) +
+  geom_boxplot() +
+  coord_flip()+
+  scale_fill_brewer(palette = "Set3") + 
+  labs(title = "Age x Diagnosis Boxplot", x = "Diagnosis", y = "Age")
+ggplotly(p13)
+```
+
+
+
+```{r}
+p14 <- ggplot(cytomegalovirus, aes(x = diagnosis,y = time.to.transplant ,fill=diagnosis)) +
+  geom_boxplot() +
+  coord_flip()+
+  scale_fill_brewer(palette = "Set3") + 
+  labs(title = "diagnosis x transplant time Boxplot", x = "Diagnosis", y = "Time to transplant")
+ggplotly(p14)
+```
+
+
+
+
+
+Relation Plots
+=======================================================================
+
+
+
+Column
+-----------------------------------------------------------------------
+### Chart
+
+```{r}
+p15 <- ggplot(cytomegalovirus, aes(x = TNC.dose, y = CD34.dose,color=diagnosis)) +
+  geom_point() +
+  labs(title = "Scatter Plot of TNC Dose vs. CD34 Dose", x = "TNC Dose (x 10^8/kg)", y = "CD34 Dose (x 10^8/kg)")
+ggplotly(p15)
+```
+
+
+
+### ChartB
+
+```{r}
+p16 <- ggplot(cytomegalovirus, aes(x = CD3.dose, y = CD8.dose,color = diagnosis)) +
+  geom_point(shape = 16, size = 3, alpha = 0.7) +
+  labs(title = "Scatter Plot of CD3 Dose vs. CD8 Dose", x = "CD3 Dose (x 10^8/kg)", y = "CD8 Dose (x 10^8/kg)")
+ggplotly(p16)
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Chart
+```{r}
+p17 <- ggplot(cytomegalovirus, aes(x = TNC.dose, y = CD8.dose,color = diagnosis)) +
+  geom_point(shape = 16, size = 3, alpha = 0.7) +
+  labs(title = "Scatter Plot of TNC Dose vs. CD8 Dose", x = "TNC Dose (x 10^8/kg)", y = "CD8 Dose (x 10^8/kg)")
+ggplotly(p17)
+```
+
+comment tab {.tabset}
+------------------
+### Comment 
+In these plots, we can clearly see that when  TNC dose and CD3 dose increase,the CD8 dose also increase, which we observed in the correlation graph.
+
+
+
+Relation Plots
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+
+### ChartA
+
+
+```{r message=FALSE}
+
+
+cytomegalovirus %>% dplyr::select(age, time.to.transplant, prior.chemo, TNC.dose, CD34.dose, CD3.dose, CD8.dose, time.to.cmv, time.to.agvhd, time.to.cgvhd) %>%
+  ggpairs(columnLabels = c("age", "time.to.transplant", "prior.chemo", "TNC.dose", "CD34.dose", "CD3.dose", "CD8.dose", "time.to.cmv", "time.to.agvhd", "time.to.cgvhd"))
+
+```
+
+
+
+Contingency table analysis
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Gender vs Diagnosis Type 
+
+
+
+```{r}
+x2table <- table(Sex = cytomegalovirus$sex, Diagnosis_Type= cytomegalovirus$diagnosis.type)
+rownames(x2table) <- c("Male", "Female")
+colnames(x2table) <- c("Myeloid", "Lymphoid")
+x2table
+```
+### Odds Ratio 
+```{r}
+oddsratio(x2table, method = "wald")$measure[-1,]
+```
+The odds ratio indicates that females have approximately 70% of the odds of being diagnosed with Myeloid or Lymphoid type compared to males.However,
+95% Wald Confidence Interval suggests that there is no significant association between gender and diagnosis type. Because the interval includes 1.
+
+
+
+Row
+-----------------------------------------------------------------------
+
+### Chi-Squared Test of Independence 
+H0: The variables in row and column are independent
+H0: The variables in row and column are NOT independent
+
+
+```{r}
+chisq.test(x2table)
+```
+
+
+Our P-value is 0.76 ,which is greater than our alpha value 0.05 , we fail to reject null hypotesis. meaning that the variables are NOT associated.
+
+
+
+
+
+Contingency table analysis
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Race vs Diagnosis Type 
+
+
+
+```{r}
+x2table2 <- table(Race = cytomegalovirus$race, Diagnosis_Type= cytomegalovirus$diagnosis.type)
+rownames(x2table2) <- c("White", "American/African")
+colnames(x2table2) <- c("Myeloid", "Lymphoid")
+x2table2
+```
+
+
+
+### Odds Ratio
+```{r}
+oddsratio(x2table2, method = "wald")$measure[-1,]
+```
+The odds ratio indicates that odds of American/African people being diagnosed with Myeloid or Lymphoid type is 3.3 times when compared to white people.
+
+
+
+Row
+-----------------------------------------------------------------------
+
+### Chi-squared Test 
+H0: The variables in row and column are independent
+H0: The variables in row and column are NOT independent
+
+
+```{r}
+chisq.test(x2table2) 
+```
+We got a warning about Chi-square may be incorrect. Thats because Chi square statistic follows chi-squared distribution approximately. Chisq.test function  warns us we have one expected count lower than 5.So, it is better to use Fisher's Exact Test.
+
+
+### Fisher's Exact Test 
+```{r}
+fisher.test(x2table2)
+```
+P value being greater than 0.05 indicates we fail to reject H0,which means the race and diagnosis type is also not related to eachother.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PMB (Purposeful selection for Modeling)
+=======================================================================
+
+
+
+Row
+-----------------------------------------------------------------------
+
+### Train & test data
+```{r}
+Train <- createDataPartition(cytomegalovirus$diagnosis,p = 0.8,list = FALSE)
+traindata <- cytomegalovirus[Train,]
+testdata <- cytomegalovirus[-Train,]
+head(traindata,5)
+names(traindata)
+```  
+.
+
+### 1) Constructing main effect models & collecting variables (if P<0.2)
+
+```{r}
+predictor_vars <- names(traindata)[-which(names(cytomegalovirus) == "cmv",)]
+model_summaries <- list()
+for (var in predictor_vars) {
+  model_fit <- glm(paste("cmv ~", var), data = traindata, family = "binomial")
+  model_summaries[[var]] <- summary(model_fit)
+}
+
+model_summaries
+```
+In the p values, we see that ID,age,sex,diagnosis,race,time.to.transplant,prior.radiation,
+recipient.cmv,donor.sex,doses of TNC,DC3,DC8,DC34,aKIRs,time.to.cmv are insignificant.
+
+Row
+-----------------------------------------------------------------------
+
+
+### Full model & backward elimination
+
+
+```{r warning=FALSE}
+fit1 <- glm(cmv~.-age-race-diagnosis-ID-sex-time.to.transplant-prior.radiation-recipient.cmv-donor.sex-TNC.dose-CD3.dose-CD8.dose-CD34.dose-aKIRs-time.to.cmv,data = traindata, family = "binomial")
+summary(fit1)
+backwardmodel <- stepAIC(fit1,direction = "backward")
+summary(backwardmodel)
+```
+We got the model including prior.transplant,donor.cmv,c1/c2,agvhd,time.cgvhd variables. The AIC value is almost 50.
+
+
+### Fit2 , the fitted model from backward elimination method
+
+```{r warning=FALSE}
+fit2 <- glm(cmv~+age+race+ID+sex+time.to.transplant+prior.radiation+recipient.cmv+donor.sex+TNC.dose+CD3.dose+CD8.dose+CD34.dose+aKIRs-time.to.cmv+donor.cmv+c1c2ratio+agvhd+time.to.cgvhd,data = traindata, family = "binomial")
+summary(fit2)
+```
+Despite the AIC value, the model variables do not contribute to the model in any ways.
+
+
+
+
+
+
+
+Logistic Regression
+=======================================================================
+
+
+
+Row
+-----------------------------------------------------------------------
+### Fit3, the model from 1'st step (sole predictors)
+Now, lets see if our significant variables (in 1st step) works
+```{r}
+fit3 <- glm(cmv~race+prior.chemo+recipient.cmv+donor.cmv+TBI.dose+time.to.transplant+c1c2ratio+time.to.cmv+agvhd+time.to.cgvhd,data = traindata)
+summary(fit3)
+```
+.
+
+
+### Significance test for 3rd fitted model (LRT)
+
+
+```{r}
+lrttest <- lrtest(fit1, fit2)
+print(lrttest)
+```
+.
+
+Row
+-----------------------------------------------------------------------
+
+
+### Hypotesis
+
+
+
+H0:  there is NO significant difference in model fit between the full model and the reduced model
+
+H1: there is a significant difference in model fit between the full model and the reduced model
+
+
+
+
+
+### Commentary
+
+
+Since our P- value is (0.6) > alpha value (0.05) we fail to reject H0, Which means there is NO significant difference in model fit between the full model and the reduced model. In other words, if we add more predictors, they do not improve the model fit.Since our full model AIC is 66 and our third model AIC is 42, The third  model is more appropriate for analysing
+
+
+
+
+
+
+
+Checking diagnostics
+=======================================================================
+
+
+
+Row
+-----------------------------------------------------------------------
+### Standardized residuals vs. pi hat
+
+```{r}
+pi.hat <- predict(fit1 , type = "response") # Storing predicted response values
+p.res <- residuals(fit1, type = "pearson") # Storing residuals
+s.res <- rstandard(fit1, type = "pearson") # Std resiudals
+lin.pred <- fit1$linear.predictors
+
+plot (x = pi.hat, y=s.res, xlab = "Pi hat", ylab = "Standardized Pearson residuals", main = "Standardized residuals vs. pi hat")
+abline (h = c(3, 2, 0, -2, -3) , lty = "dotted", col = "blue ")
+```
+
+
+
+### Standardized residuals vs Linear Predictor
+
+```{r}
+plot(x=lin.pred, y=s.res, xlab="Linear Predictor", ylab="Standardized Pearson residuals", main ="Standardized
+residuals vs Linear Predictor")
+abline(h = c(3, 2, 0, -2, -3) , lty = "dotted", col = "blue ")
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+
+###  R² values 
+ 
+
+
+```{r}
+DescTools::PseudoR2(fit1, which='Nagelkerke')
+```
+61% of the variation in the model is explained by our variables.
+
+
+
+### Analysis of Anova
+
+```{r}
+car::Anova(fit1)
+```
+. 
+
+comment tab {.tabset}
+------------------
+### Comment
+These two tables show us that we have a couple of outliers.
+
+
+Obtainin prediction using Train & Test sets
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### Train Set, first 5 rows 
+
+
+```{r}
+Train <- createDataPartition(cytomegalovirus$diagnosis,p = 0.8,list = FALSE)
+traindata <- cytomegalovirus[Train,]
+testdata <- cytomegalovirus[-Train,]
+head(traindata,5)
+```
+.
+
+
+### Predictions
+
+```{r}
+pred_traindata <- ifelse(predict(fit3, type="response") < 0.4, 0,1) 
+pred_testdata <- ifelse(predict(fit3, newdata = testdata, type="response") < 0.4, 0,1) 
+table(cytomegalovirus$cmv)
+table(pred_traindata)
+```
+threshold = 0.4 because of the table above.
+
+i.e 28 / 48 = 0.39
+
+
+
+```{r}
+pred_traindata <- as.factor(pred_traindata)
+pred_testdata <- as.factor(pred_testdata)
+```
+
+
+
+
+
+Model Performances 
+=======================================================================
+
+
+
+Row
+-----------------------------------------------------------------------
+### train set confusion matrix
+See the model performance metrics of the full model:
+```{r}
+cm_traindata <- confusionMatrix(data = pred_traindata, reference=as.factor(traindata$cmv))
+cm_traindata
+```
+
+
+
+### test set confusion matrix
+
+```{r}
+cm_testdata <- confusionMatrix(data=pred_testdata, reference=as.factor(testdata$cmv))
+cm_testdata
+```
+.
+
+Row
+-----------------------------------------------------------------------
+
+
+### Results
+
+
+```{r}
+results <- matrix(c(cm_traindata$overall[1],cm_traindata$byClass[1], cm_traindata$byClass[2], cm_traindata$byClass[7], 
+                         cm_testdata$overall[1],cm_testdata$byClass[1], cm_testdata$byClass[2], cm_testdata$byClass[7]), byrow =T, nrow=2)
+colnames(results) <- c("Accuracy","Sensitivity","Specificity","F1 Score")
+rownames(results) <- c("Train", "Test")
+
+results
+```
+The reduced model is seemed to have a good match for both the dataset and the unseen portion of the data because all train and test metrics are high enough.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
